@@ -126,7 +126,7 @@ export class Cloth {
 
             this.solveConstraints(dt);
             if (this.handleCollisions) {
-                this.solveCollisions(dt);
+                this.solveCollisions();
             }
 
             for (let i = 0; i < this.numParticles; i++) {
@@ -184,7 +184,7 @@ export class Cloth {
         }
     }
 
-    solveCollisions(dt: number): void {
+    solveCollisions(): void {
         const thickness2 = this.thickness * this.thickness;
 
         for (let i = 0; i < this.numParticles; i++) {

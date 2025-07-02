@@ -39,7 +39,7 @@ function createScene(canvas: HTMLCanvasElement, engine: Engine): Scene {
 
     new HemisphericLight("light", new Vector3(0, 1, 0), scene);
 
-    const ground = CreateGround("ground", {width: 10, height: 10}, scene);
+    CreateGround("ground", {width: 10, height: 10}, scene);
 
     const cloth = new Cloth(30, 200, 0.1, 0.1, 0.0001);
     const clothMesh = createClothMesh(cloth, scene);
