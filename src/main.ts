@@ -1,4 +1,4 @@
-import { Engine, Scene, ArcRotateCamera, Vector3, HemisphericLight, Mesh, VertexData, VertexBuffer, StandardMaterial, Color3} from "@babylonjs/core";
+import { Engine, Scene, ArcRotateCamera, Vector3, HemisphericLight, Mesh, VertexData, VertexBuffer, StandardMaterial, Color3, CreateGround} from "@babylonjs/core";
 import {Cloth} from "./cloth";
 
 function createClothMesh(cloth: Cloth, scene: Scene): Mesh {
@@ -38,12 +38,17 @@ function createScene(canvas: HTMLCanvasElement, engine: Engine): Scene {
 
     new HemisphericLight("light", new Vector3(0, 1, 0), scene);
 
-    const cloth = new Cloth(10, 10, 0.1, 0.01, 0.0001);
+    const ground = CreateGround("ground", {width: 10, height: 10}, scene);
+
+    const cloth = new Cloth(30, 200, 0.1, 0.1, 0.0001);
     const clothMesh = createClothMesh(cloth, scene);
 
-    const dt = 1 / 60;
+    const frameDT = 1 / 60;
+    const numSubSteps = 10;
+    const gravity = new Float32Array([0, -9.81, 0]);
+
     engine.runRenderLoop(() => {
-        cloth.step(dt);
+        cloth.step(frameDT, numSubSteps, gravity);
         updateClothMesh(cloth, clothMesh);
         scene.render();
     });
