@@ -19,6 +19,7 @@ function createClothMesh(cloth: Cloth, scene: Scene): Mesh {
 
     const material = new StandardMaterial("clothMat", scene);
     material.diffuseColor = new Color3(0.8, 0.2, 0.2);
+    material.emissiveColor = new Color3(0.2, 0.2, 0.8);
     material.backFaceCulling = false;
     clothMesh.material = material;
 
