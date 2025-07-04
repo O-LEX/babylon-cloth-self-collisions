@@ -24,6 +24,7 @@ export class Cloth {
 
     //grab
     grabId: number = -1;
+    grabPos: Vector3 = new Vector3();
 
     constructor(numX: number, numY: number, spacing: number, thickness: number, bendingCompliance: number) {
         this.numX = numX;
@@ -127,6 +128,7 @@ export class Cloth {
             }
 
             this.solveGroundCollisions();
+            this.solveGrab();
 
             this.solveConstraints(dt);
             if (this.handleCollisions) {
@@ -149,13 +151,26 @@ export class Cloth {
             if (this.invMass[i] === 0.0) continue;
             const y = this.pos[i * 3 + 1];
             if (y < groundLevel) {
+                const py = this.prevPos[i * 3 + 1];
+                this.pos[i * 3 + 1] = groundLevel;
+                this.prevPos[i * 3 + 1] = groundLevel + (y - py) * damping;
+
                 const dx = this.pos[i * 3] - this.prevPos[i * 3];
                 const dz = this.pos[i * 3 + 2] - this.prevPos[i * 3 + 2];
-                this.pos[i * 3] -= dx * damping;
-                this.pos[i * 3 + 1] = groundLevel;
-                this.pos[i * 3 + 2] -= dz * damping;
+                this.prevPos[i * 3] += dx * damping;
+                this.prevPos[i * 3 + 2] += dz * damping;
             }
         }
+    }
+
+    solveGrab(): void {
+        if (this.grabId === -1) return;
+        const dx = this.pos[this.grabId * 3] - this.grabPos.x;
+        const dy = this.pos[this.grabId * 3 + 1] - this.grabPos.y;
+        const dz = this.pos[this.grabId * 3 + 2] - this.grabPos.z;
+        this.pos[this.grabId * 3] -= dx * 0.1;
+        this.pos[this.grabId * 3 + 1] -= dy * 0.1;
+        this.pos[this.grabId * 3 + 2] -= dz * 0.1;
     }
 
     solveConstraints(dt: number): void {
@@ -254,29 +269,26 @@ export class Cloth {
     }
 
     startGrab(pos: Vector3): void {
-        let minDist2 = Number.MAX_VALUE;
+        this.grabPos.copyFrom(pos);
+        let minD2 = Number.MAX_VALUE;
+        this.grabId = -1;
         for (let i = 0; i < this.numParticles; i++) {
             const dx = this.pos[i * 3] - pos.x;
             const dy = this.pos[i * 3 + 1] - pos.y;
             const dz = this.pos[i * 3 + 2] - pos.z;
-            const dist2 = dx * dx + dy * dy + dz * dz;
-            if (dist2 < minDist2) {
-                minDist2 = dist2;
+            const d2 = dx * dx + dy * dy + dz * dz;
+            if (d2 < minD2) {
+                minD2 = d2;
                 this.grabId = i;
             }
         }
-
-        this.invMass[this.grabId] = 0.0;
     }
 
     moveGrabbed(pos: Vector3): void {
-        this.pos[this.grabId * 3] = pos.x;
-        this.pos[this.grabId * 3 + 1] = pos.y;
-        this.pos[this.grabId * 3 + 2] = pos.z;
+        this.grabPos.copyFrom(pos);
     }
 
     endGrab(): void {
-        this.invMass[this.grabId] = 1.0;
         this.grabId = -1;
     }
 }
