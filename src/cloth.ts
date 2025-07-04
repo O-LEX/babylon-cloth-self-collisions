@@ -1,4 +1,5 @@
 import { Hash } from "./hash";
+import { Vector3 } from "@babylonjs/core";
 
 export class Cloth {
     numX: number;
@@ -20,6 +21,9 @@ export class Cloth {
     compliances: Float32Array;
     numConstraints: number;
     restLens: Float32Array;
+
+    //grab
+    grabId: number = -1;
 
     constructor(numX: number, numY: number, spacing: number, thickness: number, bendingCompliance: number) {
         this.numX = numX;
@@ -247,5 +251,32 @@ export class Cloth {
                 */
             }
         }
+    }
+
+    startGrab(pos: Vector3): void {
+        let minDist2 = Number.MAX_VALUE;
+        for (let i = 0; i < this.numParticles; i++) {
+            const dx = this.pos[i * 3] - pos.x;
+            const dy = this.pos[i * 3 + 1] - pos.y;
+            const dz = this.pos[i * 3 + 2] - pos.z;
+            const dist2 = dx * dx + dy * dy + dz * dz;
+            if (dist2 < minDist2) {
+                minDist2 = dist2;
+                this.grabId = i;
+            }
+        }
+
+        this.invMass[this.grabId] = 0.0;
+    }
+
+    moveGrabbed(pos: Vector3): void {
+        this.pos[this.grabId * 3] = pos.x;
+        this.pos[this.grabId * 3 + 1] = pos.y;
+        this.pos[this.grabId * 3 + 2] = pos.z;
+    }
+
+    endGrab(): void {
+        this.invMass[this.grabId] = 1.0;
+        this.grabId = -1;
     }
 }

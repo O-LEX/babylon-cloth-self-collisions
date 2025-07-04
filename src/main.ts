@@ -1,5 +1,6 @@
-import { Engine, Scene, ArcRotateCamera, Vector3, HemisphericLight, Mesh, VertexData, VertexBuffer, StandardMaterial, Color3, CreateGround} from "@babylonjs/core";
+import { Engine, Scene, ArcRotateCamera, Vector3, HemisphericLight, Mesh, VertexData, VertexBuffer, StandardMaterial, Color3, CreateGround, PointerInfo} from "@babylonjs/core";
 import {Cloth} from "./cloth";
+import {Grabber} from "./grabber";
 
 function createClothMesh(cloth: Cloth, scene: Scene): Mesh {
     const clothMesh = new Mesh("cloth", scene);
@@ -15,11 +16,17 @@ function createClothMesh(cloth: Cloth, scene: Scene): Mesh {
     const vertexData = new VertexData();
     vertexData.positions = cloth.pos;
     vertexData.indices = indices;
+
+    const normals: number[] = [];
+    VertexData.ComputeNormals(vertexData.positions, vertexData.indices, normals);
+    vertexData.normals = normals;
+
     vertexData.applyToMesh(clothMesh, true);
 
     const material = new StandardMaterial("clothMat", scene);
-    material.diffuseColor = new Color3(0.8, 0.2, 0.2);
-    material.emissiveColor = new Color3(0.2, 0.2, 0.8);
+    material.diffuseColor = new Color3(0.5, 0.5, 1);
+    material.specularColor = new Color3(0, 0, 0);
+    material.emissiveColor = new Color3(0.2, 0.2, 0.5);
     material.backFaceCulling = false;
     clothMesh.material = material;
 
@@ -27,9 +34,22 @@ function createClothMesh(cloth: Cloth, scene: Scene): Mesh {
 }
 
 function updateClothMesh(cloth: Cloth, clothMesh: Mesh): void {
-    clothMesh.getVertexBuffer(VertexBuffer.PositionKind)?.update(cloth.pos);
-}
+    // Update vertex positions
+    const posBuffer = clothMesh.getVertexBuffer(VertexBuffer.PositionKind);
+    posBuffer?.update(cloth.pos);
+    clothMesh.refreshBoundingInfo();
 
+    // Recompute normals
+    const indices = clothMesh.getIndices();
+    if (!indices) return;
+
+    const normals: number[] = [];
+    VertexData.ComputeNormals(cloth.pos, indices, normals);
+
+    // Update normal buffer
+    const normalBuffer = clothMesh.getVertexBuffer(VertexBuffer.NormalKind);
+    normalBuffer?.update(normals);
+}
 
 function createScene(canvas: HTMLCanvasElement, engine: Engine): Scene {
     const scene = new Scene(engine);
@@ -39,19 +59,24 @@ function createScene(canvas: HTMLCanvasElement, engine: Engine): Scene {
 
     new HemisphericLight("light", new Vector3(0, 1, 0), scene);
 
-    CreateGround("ground", {width: 10, height: 10}, scene);
+    const ground = CreateGround("ground", {width: 10, height: 10}, scene);
+    ground.isPickable = false;
 
-    const cloth = new Cloth(30, 200, 0.1, 0.1, 0.0001);
+    const cloth = new Cloth(30, 200, 0.1, 0.08, 0.0001);
     const clothMesh = createClothMesh(cloth, scene);
 
     const frameDT = 1 / 60;
     const numSubSteps = 10;
     const gravity = new Float32Array([0, -9.81, 0]);
 
-    engine.runRenderLoop(() => {
+    scene.onBeforeRenderObservable.add(() => {
         cloth.step(frameDT, numSubSteps, gravity);
         updateClothMesh(cloth, clothMesh);
-        scene.render();
+    });
+
+    const grabber = new Grabber(scene, cloth);
+    scene.onPointerObservable.add((pointerInfo: PointerInfo) => {
+        grabber.handlePointerInfo(pointerInfo);
     });
 
     return scene;
